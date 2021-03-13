@@ -240,14 +240,12 @@ def main(args):
             print("MAPE : {:.4f}".format(np.average(test_mapes)))
             print(" R^2 : {:.4f}".format(np.average(test_r2s)))
 
-            pred_tests, labels = pred_tests[:100], labels[:100]
-
             # Plot Figure #
-            plot_pred_test(pred_tests, labels, args.plots_path, args.feature, model, step)
+            plot_pred_test(pred_tests[:args.time_plot], labels[:args.time_plot], args.plots_path, args.feature, model, step)
 
             # Save Numpy files #
             np.save(os.path.join(args.numpy_path, '{}_using_{}_TestSet.npy'.format(model.__class__.__name__, step)), np.asarray(pred_tests))
-            np.save(os.path.join(args.numpy_path, 'TestSet.npy'), np.asarray(labels))
+            np.save(os.path.join(args.numpy_path, 'TestSet_using_{}.npy'.format(step)), np.asarray(labels))
 
     else:
         raise NotImplementedError
@@ -281,6 +279,7 @@ if __name__ == "__main__":
     parser.add_argument('--train_split', type=float, default=0.8, help='train_split')
     parser.add_argument('--test_split', type=float, default=0.5, help='test_split')
 
+    parser.add_argument('--time_plot', type=int, default=100, help='time stamp for plotting')
     parser.add_argument('--num_epochs', type=int, default=500, help='total epoch')
     parser.add_argument('--print_every', type=int, default=10, help='print statistics for every default epoch')
 

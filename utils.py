@@ -138,11 +138,15 @@ def mean_absolute_percentage_error(y_true, y_pred):
 def plot_pred_test(pred, actual, path, feature, model, step):
     """Plot Test set Prediction"""
     plt.figure(figsize=(10, 8))
+
     plt.plot(pred, label='Pred')
     plt.plot(actual, label='Actual')
+
     plt.xlabel('Time', fontsize=18)
     plt.ylabel('{}'.format(feature), fontsize=18)
+
     plt.legend(loc='best')
     plt.grid()
+
     plt.title('{} Energy Prediction using {} and {}'.format(feature, model.__class__.__name__, step), fontsize=18)
     plt.savefig(os.path.join(path, '{} Energy Prediction using {} and {}.png'.format(feature, model.__class__.__name__, step)))

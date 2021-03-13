@@ -1,8 +1,6 @@
 # Univariate-Time-Series-Prediction-using-Deep-Learning
 Univariate Time Series Prediction using Deep Learning and PyTorch
 
-## Currently Fixing
-
 ### 0. Introduction
 This repository provides **Univariate Time Series Prediction** using deep learning models including **DNN**, **CNN**, **RNN**, **LSTM**, **GRU**, **Recursive LSTM**, and **Attention LSTM**. 
 
