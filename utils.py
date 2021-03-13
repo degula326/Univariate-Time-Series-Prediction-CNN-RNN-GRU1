@@ -42,21 +42,45 @@ def plot_full(path, data, feature):
     plt.show()
 
 
-def data_loader(data, seq_length, train_split, test_split, batch_size):
+def split_sequence_uni_step(sequence, n_steps):
+    """Rolling Window Function for Uni-step"""
+    X, y = list(), list()
+
+    for i in range(len(sequence)):
+        end_ix = i + n_steps
+
+        if end_ix > len(sequence)-1:
+            break
+
+        seq_x, seq_y = sequence[i:end_ix], sequence[end_ix]
+
+        X.append(seq_x)
+        y.append(seq_y)
+
+    return np.array(X), np.array(y)
+
+
+def split_sequence_multi_step(sequence, n_steps_in, n_steps_out):
+    """Rolling Window Function for Multi-step"""
+    X, y = list(), list()
+
+    for i in range(len(sequence)):
+        end_ix = i + n_steps_in
+        out_end_ix = end_ix + n_steps_out
+
+        if out_end_ix > len(sequence):
+            break
+
+        seq_x, seq_y = sequence[i:end_ix], sequence[end_ix:out_end_ix]
+
+        X.append(seq_x)
+        y.append(seq_y)
+
+    return np.array(X), np.array(y)[:, :, 0]
+
+
+def data_loader(x, y, train_split, test_split, batch_size):
     """Prepare data by applying sliding windows and return data loader"""
-
-    data = data.values
-
-    # Scaling Window #
-    x, y = list(), list()
-
-    for i in range(len(data) - seq_length-1):
-        data_x = data[i:i + seq_length]
-        data_y = data[i + seq_length]
-        x.append(data_x)
-        y.append(data_y)
-
-    x, y = np.array(x), np.array(y)
 
     # Split to Train, Validation and Test Set #
     train_seq, test_seq, train_label, test_label = train_test_split(x, y, train_size=train_split, shuffle=False)
@@ -98,17 +122,20 @@ def percentage_error(actual, predicted):
             res[j] = predicted[j] / np.mean(actual)
     return res
 
+
 def mean_percentage_error(y_true, y_pred):
     """Mean Percentage Error"""
-    return np.mean(percentage_error(np.asarray(y_true), np.asarray(y_pred))) * 100
+    mpe = np.mean(percentage_error(np.asarray(y_true), np.asarray(y_pred))) * 100
+    return mpe
 
 
 def mean_absolute_percentage_error(y_true, y_pred):
     """Mean Absolute Percentage Error"""
-    return np.mean(np.abs(percentage_error(np.asarray(y_true), np.asarray(y_pred)))) * 100
+    mape = np.mean(np.abs(percentage_error(np.asarray(y_true), np.asarray(y_pred)))) * 100
+    return mape
 
 
-def plot_pred_test(pred, actual, path, feature, model):
+def plot_pred_test(pred, actual, path, feature, model, step):
     """Plot Test set Prediction"""
     plt.figure(figsize=(10, 8))
     plt.plot(pred, label='Pred')
@@ -117,5 +144,5 @@ def plot_pred_test(pred, actual, path, feature, model):
     plt.ylabel('{}'.format(feature), fontsize=18)
     plt.legend(loc='best')
     plt.grid()
-    plt.title('{} Energy Prediction using {}'.format(feature, model.__class__.__name__), fontsize=18)
-    plt.savefig(os.path.join(path, '{} Energy Prediction using {}.png'.format(feature, model.__class__.__name__)))
+    plt.title('{} Energy Prediction using {} and {}'.format(feature, model.__class__.__name__, step), fontsize=18)
+    plt.savefig(os.path.join(path, '{} Energy Prediction using {} and {}.png'.format(feature, model.__class__.__name__, step)))
