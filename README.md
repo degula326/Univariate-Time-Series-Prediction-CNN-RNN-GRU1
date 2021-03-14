@@ -2,14 +2,14 @@
 
 ### 0. Overview
 This repository provides **Univariate Time Series Prediction**. It supports; 
-- using various deep learning models including **DNN**, **CNN**, **RNN**, **LSTM**, **GRU**, and **Attention LSTM**.
+- using various deep learning models including **DNN**, **CNN**, **RNN**, **LSTM**, **GRU**, and **Attentional LSTM**.
 - using **single-step** and **multi-step** prediction.
 
 The dataset used is **Appliances Energy Prediction Data Set** and can be found [here](https://archive.ics.uci.edu/ml/datasets/Appliances+energy+prediction).
 
 ### 1. Quantitative Analysis
 
-According to the table below, **CNN using 1D Convolutional layer** outperformed the other models. 
+According to the table below, **CNN using 1D Convolutional layer** outperformed the other models on **single-step** time series prediction. 
 | Model | MAE↓ | MSE↓ | RMSE↓ | MPE↓ | MAPE↓ | R Squared↑ |
 |:---:|:---:|:---:|:---:|:---:|:---:|:---:|
 | DNN | 29.3038 | 3673.7921 | 57.0114 | -15.6800 | 26.4763 | 0.3820 | 
@@ -19,6 +19,7 @@ According to the table below, **CNN using 1D Convolutional layer** outperformed 
 | GRU | 29.0402 | **3564.9701** | 56.2790 | -16.9984 | 26.9390 | 0.3872 |
 | Attentional LSTM | 28.9658 | 3603.0751 | 56.3838 | -16.8199 | 26.3129 | 0.3898 |
 
+According to the table below, **DNN** outperformed the other models on **multi-step** time series prediction.
 | Model | MAE↓ | MSE↓ | RMSE↓ | MPE↓ | MAPE↓ | R Squared↑ |
 |:---:|:---:|:---:|:---:|:---:|:---:|:---:|
 | **DNN** | **31.3555** | 2913.6521 | **49.3946** | **-16.7329** | **29.1459** | **0.1775** |
