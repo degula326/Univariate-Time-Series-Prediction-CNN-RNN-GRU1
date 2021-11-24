@@ -2,13 +2,13 @@ import os
 import random
 import argparse
 import numpy as np
-
+import matplotlib.pyplot as plt
 from sklearn.preprocessing import MinMaxScaler
 from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
-
+import pandas as pd
 import torch
 
-from models import DNN, RNN, LSTM, GRU, AttentionalLSTM, CNN
+from models import DNN, RNN, LSTM, GRU, AttentionalLSTM, CNN,AttentionalGRU,AttentionalBIGRU
 from utils import make_dirs, load_data, plot_full, data_loader, split_sequence_uni_step, split_sequence_multi_step
 from utils import get_lr_scheduler, mean_percentage_error, mean_absolute_percentage_error, plot_pred_test
 
@@ -21,8 +21,9 @@ device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
 
 def main(args):
-
     # Fix Seed #
+    #p = []  # 预测值
+    #r = []  # 真实值
     random.seed(args.seed)
     np.random.seed(args.seed)
     torch.manual_seed(args.seed)
@@ -74,11 +75,17 @@ def main(args):
     elif args.model == 'rnn':
         model = RNN(args.input_size, args.hidden_size, args.num_layers, args.output_size).to(device)
     elif args.model == 'lstm':
-        model = LSTM(args.input_size, args.hidden_size, args.num_layers, args.output_size, args.bidirectional).to(device)
+        model = LSTM(args.input_size, args.hidden_size, args.num_layers, args.output_size, args.bidirectional).to(
+            device)
     elif args.model == 'gru':
         model = GRU(args.input_size, args.hidden_size, args.num_layers, args.output_size).to(device)
     elif args.model == 'attentional':
-        model = AttentionalLSTM(args.input_size, args.qkv, args.hidden_size, args.num_layers, args.output_size, args.bidirectional).to(device)
+        model = AttentionalLSTM(args.input_size, args.qkv, args.hidden_size, args.num_layers, args.output_size,
+                                args.bidirectional).to(device)
+    elif args.model == 'attentionalgru':
+        model = AttentionalGRU(args.input_size, args.qkv, args.hidden_size, args.num_layers, args.output_size).to(device)
+    elif args.model == 'attentional-bi-gru':
+        model = AttentionalBIGRU(args.input_size, args.qkv, args.hidden_size, args.num_layers, args.output_size,args.bidirectional).to(device)
     else:
         raise NotImplementedError
 
@@ -93,11 +100,11 @@ def main(args):
     if args.mode == 'train':
 
         # Train #
-        print("Training {} using {} started with total epoch of {}.".format(model.__class__.__name__, step, args.num_epochs))
+        print("Training {} using {} started with total epoch of {}.".format(model.__class__.__name__, step,
+                                                                            args.num_epochs))
 
         for epoch in range(args.num_epochs):
             for i, (data, label) in enumerate(train_loader):
-
                 # Prepare Data #
                 data = data.to(device, dtype=torch.float32)
                 label = label.to(device, dtype=torch.float32)
@@ -117,12 +124,13 @@ def main(args):
                 train_losses.append(train_loss.item())
 
             # Print Statistics #
-            if (epoch+1) % args.print_every == 0:
-                print("Epoch [{}/{}]".format(epoch+1, args.num_epochs))
+            if (epoch + 1) % args.print_every == 0:
+                print("Epoch [{}/{}]".format(epoch + 1, args.num_epochs))
                 print("Train Loss {:.4f}".format(np.average(train_losses)))
 
             # Learning Rate Scheduler #
             optim_scheduler.step()
+
 
             # Validation #
             with torch.no_grad():
@@ -161,7 +169,7 @@ def main(args):
                     val_mapes.append(val_mape.item())
                     val_r2s.append(val_r2.item())
 
-            if (epoch+1) % args.print_every == 0:
+            if (epoch + 1) % args.print_every == 0:
 
                 # Print Statistics #
                 print("Val Loss {:.4f}".format(np.average(val_losses)))
@@ -177,7 +185,9 @@ def main(args):
 
                 if curr_val_loss < best_val_loss:
                     best_val_loss = min(curr_val_loss, best_val_loss)
-                    torch.save(model.state_dict(), os.path.join(args.weights_path, 'BEST_{}_using_{}.pkl'.format(model.__class__.__name__, step)))
+                    torch.save(model.state_dict(), os.path.join(args.weights_path,
+                                                                'BEST_{}_using_{}.pkl'.format(model.__class__.__name__,
+                                                                                              step)))
 
                     print("Best model is saved!\n")
                     best_val_improv = 0
@@ -189,9 +199,11 @@ def main(args):
     elif args.mode == 'test':
 
         # Load the Model Weight #
-        model.load_state_dict(torch.load(os.path.join(args.weights_path, 'BEST_{}_using_{}.pkl'.format(model.__class__.__name__, step))))
+        model.load_state_dict(
+            torch.load(os.path.join(args.weights_path, 'BEST_{}_using_{}.pkl'.format(model.__class__.__name__, step))))
 
         # Test #
+
         with torch.no_grad():
             for i, (data, label) in enumerate(test_loader):
 
@@ -201,7 +213,9 @@ def main(args):
 
                 # Forward Data #
                 pred_test = model(data)
-
+                #a= pred_test.permute(1, 0).squeeze(0).numpy()
+                #p.append(pred_test.permute(1,0).squeeze(0).numpy())
+                #r.append(label.permute(1,0).squeeze(0).numpy())
                 # Convert to Original Value Range #
                 pred_test, label = pred_test.detach().cpu().numpy(), label.detach().cpu().numpy()
 
@@ -241,12 +255,16 @@ def main(args):
             print(" R^2 : {:.4f}".format(np.average(test_r2s)))
 
             # Plot Figure #
-            plot_pred_test(pred_tests[:args.time_plot], labels[:args.time_plot], args.plots_path, args.feature, model, step)
+            plot_pred_test(pred_tests[:args.time_plot], labels[:args.time_plot], args.plots_path, args.feature, model,
+                           step)
 
             # Save Numpy files #
-            np.save(os.path.join(args.numpy_path, '{}_using_{}_TestSet.npy'.format(model.__class__.__name__, step)), np.asarray(pred_tests))
+            np.save(os.path.join(args.numpy_path, '{}_using_{}_TestSet.npy'.format(model.__class__.__name__, step)),
+                    np.asarray(pred_tests))
             np.save(os.path.join(args.numpy_path, 'TestSet_using_{}.npy'.format(step)), np.asarray(labels))
-
+            #c={"r":r,"p":p}
+            #data=pd.DataFrame(c)
+            #data.to_csv("res/r.csv")
     else:
         raise NotImplementedError
 
@@ -255,7 +273,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
 
     parser.add_argument('--seed', type=int, default=7777, help='seed for reproducibility')
-    parser.add_argument('--feature', type=str, default='Appliances', help='extract which feature for prediction')
+    parser.add_argument('--feature', type=str, default='Total Load', help='extract which feature for prediction')
     parser.add_argument('--multi_step', type=bool, default=False, help='multi-step or not')
     parser.add_argument('--seq_length', type=int, default=5, help='window size')
     parser.add_argument('--batch_size', type=int, default=128, help='mini-batch size')
@@ -263,15 +281,16 @@ if __name__ == "__main__":
     parser.add_argument('--plot_full', type=bool, default=False, help='plot full graph or not')
     parser.add_argument('--mode', type=str, default='train', choices=['train', 'test', 'inference'])
 
-    parser.add_argument('--model', type=str, default='lstm', choices=['dnn', 'cnn', 'rnn', 'lstm', 'gru', 'attentional'])
+    parser.add_argument('--model', type=str, default='attentional-bi-gru',
+                        choices=['dnn', 'cnn', 'rnn', 'lstm', 'gru', 'attentional','attentionalgru','attentional-bi-gru'])
     parser.add_argument('--input_size', type=int, default=1, help='input_size')
     parser.add_argument('--hidden_size', type=int, default=10, help='hidden_size')
     parser.add_argument('--num_layers', type=int, default=1, help='num_layers')
     parser.add_argument('--output_size', type=int, default=1, help='output_size')
-    parser.add_argument('--bidirectional', type=bool, default=False, help='use bidirectional or not')
+    parser.add_argument('--bidirectional', type=bool, default=True, help='use bidirectional or not')
     parser.add_argument('--qkv', type=int, default=5, help='dimension for query, key and value')
 
-    parser.add_argument('--which_data', type=str, default='./data/energydata_complete.csv', help='which data to use')
+    parser.add_argument('--which_data', type=str, default='./data/ods2015.csv', help='which data to use')
     parser.add_argument('--weights_path', type=str, default='./results/weights/', help='weights path')
     parser.add_argument('--plots_path', type=str, default='./results/plots/', help='plots path')
     parser.add_argument('--numpy_path', type=str, default='./results/numpy/', help='numpy path')
@@ -280,11 +299,12 @@ if __name__ == "__main__":
     parser.add_argument('--test_split', type=float, default=0.5, help='test_split')
 
     parser.add_argument('--time_plot', type=int, default=100, help='time stamp for plotting')
-    parser.add_argument('--num_epochs', type=int, default=500, help='total epoch')
+    parser.add_argument('--num_epochs', type=int, default=2000, help='total epoch')
     parser.add_argument('--print_every', type=int, default=10, help='print statistics for every default epoch')
 
     parser.add_argument('--lr', type=float, default=1e-3, help='learning rate')
-    parser.add_argument('--lr_scheduler', type=str, default='cosine', help='learning rate scheduler', choices=['step', 'plateau', 'cosine'])
+    parser.add_argument('--lr_scheduler', type=str, default='cosine', help='learning rate scheduler',
+                        choices=['step', 'plateau', 'cosine'])
 
     config = parser.parse_args()
 
